@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interaktiver Wecker</title>
+  <link rel="stylesheet" href="styles.css"> <!-- Verlinkt die CSS-Datei -->
+</head>
+<body>
+
+  <h1>Wecker-Einstellungen</h1>
+  
+  <form id="alarmForm">
+    <label for="time">Weckzeit einstellen:</label>
+    <input type="time" id="time" name="time" required>
+
+    <label for="music">Musikauswahl:</label>
+    <select id="music" name="music" required>
+      <option value="song1.mp3">Song 1</option>
+      <option value="song2.mp3">Song 2</option>
+      <option value="song3.mp3">Song 3</option>
+    </select>
+
+    <button type="submit">Wecker setzen</button>
+  </form>
+
+  <div id="highscoreDisplay">
+    Aktueller Highscore: <span id="highscore">--:--</span><br>
+    Aktuelle Weckzeit: <span id="alarmTime">--:--</span><br>
+    Ausgewählte Musik: <span id="selectedMusic">--</span>
+  </div>
+
+  <button id="refreshHighscore">Highscore aktualisieren</button>
+
+  <script src="script.js"></script> <!-- Verlinkt die JavaScript-Datei -->
+
+</body>
+</html>
