@@ -7,7 +7,7 @@ document.getElementById('alarmForm').addEventListener('submit', function(event) 
   const music = document.getElementById('music').value;
 
   // Sende die Daten an das Backend
-  fetch('http://localhost:3000/api/setAlarm', {
+  fetch('http://192.168.0.139:3000/api/setAlarm', {  // Aktualisierte IP-Adresse des Backends
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -27,13 +27,11 @@ document.getElementById('alarmForm').addEventListener('submit', function(event) 
 // Funktion zum Abrufen des Highscores
 document.getElementById('refreshHighscore').addEventListener('click', function() {
   // Sende eine GET-Anfrage an das Backend, um den Highscore abzurufen
-  fetch('http://localhost:3000/api/getHighscore')
+  fetch('http://192.168.0.139:3000/api/getHighscore')
   .then(response => response.json())  // Die Antwort in JSON umwandeln
   .then(data => {
-    // Den erhaltenen Highscore und die Weckzeit/Musik im HTML anzeigen
+    // Den erhaltenen Highscore im HTML anzeigen
     document.getElementById('highscore').textContent = data.highscore;
-    document.getElementById('alarmTime').textContent = data.alarmTime;
-    document.getElementById('selectedMusic').textContent = data.selectedMusic;
   })
   .catch((error) => {
     console.error('Fehler beim Abrufen des Highscores:', error);  // Fehlerbehandlung
