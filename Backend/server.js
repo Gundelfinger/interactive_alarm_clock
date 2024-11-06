@@ -1,45 +1,79 @@
-const express = require('express');
-const cors = require('cors');
-const app = express();
-const port = 3000;
+// Importiere die benötigten Module
+const mqtt = require('mqtt');
 
-// Middleware-Konfiguration
-app.use(cors()); // Erlaubt Anfragen von anderen Quellen
-app.use(express.json()); // Middleware, um JSON-Anfragen zu verarbeiten
+// MQTT Broker-Verbindungseinstellungen
+const mqttServer = 'mqtt://broker.hivemq.com'; // HiveMQ Broker
+const clientId = 'BackendClient';
 
-// Dummy-Daten für den Highscore, Weckzeit und Musik
-let highscore = '00:00';
-let alarmTime = '07:00';
-let selectedMusic = 'song1.mp3';
-
-// API-Endpunkt zum Empfangen des Highscores vom Arduino
-app.post('/api/submitHighscore', (req, res) => {
-    const { highscore: receivedHighscore } = req.body;
-    highscore = receivedHighscore; // Speichere den empfangenen Highscore
-    console.log(`Empfangener Highscore vom Arduino: ${highscore}`);
-    res.json({ message: `Highscore ${highscore} erfolgreich empfangen` });
+// Erstelle eine Verbindung zum MQTT-Broker
+const client = mqtt.connect(mqttServer, {
+  clientId: clientId,
+  clean: true,
+  connectTimeout: 4000,
+  reconnectPeriod: 1000,
 });
 
-// API-Endpunkt für den Arduino, um die Weckzeit und Musiktitel zu erhalten
-app.get('/api/getAlarmSettings', (req, res) => {
-    res.json({ alarmTime, selectedMusic });
+// Wenn die Verbindung erfolgreich hergestellt wurde
+client.on('connect', () => {
+  console.log('Verbunden mit MQTT Broker');
+
+  // Abonniere das Topic, um die Alarmeinstellungen vom Arduino zu empfangen
+  client.subscribe('alarm/settings', (err) => {
+    if (!err) {
+      console.log('Abonniert: alarm/settings');
+    } else {
+      console.error('Fehler beim Abonnieren des Topics alarm/settings:', err);
+    }
+  });
+
+  // Abonniere das Topic für Highscores
+  client.subscribe('highscore', (err) => {
+    if (!err) {
+      console.log('Abonniert: highscore');
+    } else {
+      console.error('Fehler beim Abonnieren des Topics highscore:', err);
+    }
+  });
+
+  // Beispiel: Schicke eine Alarmzeit an den Arduino
+  sendAlarmSettings('08:00', 'song1.mp3');
 });
 
-// API-Endpunkt zum Setzen der Weckzeit und Musikauswahl von der Webanwendung
-app.post('/api/setAlarm', (req, res) => {
-    const { time, music } = req.body;
-    alarmTime = time;  // Setze die neue Weckzeit
-    selectedMusic = music;  // Setze die neue Musikauswahl
-    console.log(`Weckzeit: ${alarmTime}, Musik: ${selectedMusic}`);
-    res.json({ message: `Weckzeit auf ${alarmTime} gesetzt. Musik: ${selectedMusic} ausgewählt.` });
+// Wenn eine Nachricht empfangen wird
+client.on('message', (topic, message) => {
+  // Die Nachricht ist ein Buffer, daher in String umwandeln
+  const msg = message.toString();
+  console.log(`Nachricht erhalten [${topic}]: ${msg}`);
+
+  // Verarbeite die Nachricht entsprechend dem Topic
+  if (topic === 'alarm/settings') {
+    console.log('Alarmeinstellungen vom Arduino empfangen:', msg);
+  } else if (topic === 'highscore') {
+    console.log('Highscore vom Arduino empfangen:', msg);
+  }
 });
 
-// API-Endpunkt zum Abrufen des aktuellen Highscores und der Weckzeit von der Webanwendung
-app.get('/api/getHighscore', (req, res) => {
-    res.json({ highscore, alarmTime, selectedMusic });  // Gibt Highscore, Weckzeit und Musik zurück
+// Funktion zum Senden der Alarmzeit an das Arduino-Topic
+function sendAlarmSettings(time, music) {
+  const message = JSON.stringify({ alarmTime: time, selectedMusic: music });
+  client.publish('alarm/settings', message, (err) => {
+    if (err) {
+      console.error('Fehler beim Senden der Alarmeinstellungen:', err);
+    } else {
+      console.log('Alarmeinstellungen erfolgreich gesendet:', message);
+    }
+  });
+}
+
+// Fehlerbehandlung für Verbindungsprobleme
+client.on('error', (err) => {
+  console.error('MQTT Verbindungsfehler:', err);
 });
 
-// Start des Servers
-app.listen(port, () => {
-    console.log(`Backend-Server läuft auf http://localhost:${port}`);
+client.on('offline', () => {
+  console.log('MQTT ist offline. Versuche erneut zu verbinden...');
+});
+
+client.on('reconnect', () => {
+  console.log('MQTT versucht, die Verbindung erneut herzustellen...');
 });
