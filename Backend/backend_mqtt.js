@@ -36,7 +36,7 @@ client.on('connect', () => {
   console.log('Verbunden mit MQTT Broker');
 
   // Abonniere das Topic für den Highscore
-  client.subscribe('highscore', (err) => {
+  client.subscribe('interactive_alarm/benutzer123/highscore', (err) => {
     if (!err) {
       console.log('Highscore-Topic abonniert');
     } else {
@@ -47,7 +47,7 @@ client.on('connect', () => {
 
 // Event-Handler für empfangene MQTT-Nachrichten
 client.on('message', (topic, message) => {
-  if (topic === 'highscore') {
+  if (topic === 'interactive_alarm/benutzer123/highscore') {
     console.log(`Highscore empfangen: ${message.toString()}`);
     currentHighscore = message.toString(); // Speichert den aktuellen Highscore
   }
@@ -60,7 +60,7 @@ app.post('/api/setAlarm', (req, res) => {
 
   // Nachricht formatieren und an den Broker senden
   const message = JSON.stringify({ alarmTime: time, selectedMusic: music });
-  client.publish('alarm/settings', message, (err) => {
+  client.publish('interactive_alarm/benutzer123/alarm/settings', message, { qos: 0 }, (err) => {
     if (err) {
       console.error('Fehler beim Senden der Alarmeinstellungen:', err);
       res.status(500).send({ error: 'Fehler beim Setzen der Weckzeit.' });
