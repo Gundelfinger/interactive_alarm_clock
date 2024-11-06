@@ -1,0 +1,24 @@
+# Node modules - diese werden nicht versioniert
+**/node_modules/
+
+# Log-Dateien
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Betriebssystem-spezifische Dateien (wie Thumbs.db, .DS_Store)
+.DS_Store
+Thumbs.db
+
+# IDE- und Editor-Konfigurationsdateien (für VSCode, Sublime, usw.)
+.vscode/
+.idea/
+*.swp
+
+# Temporäre Dateien und Build-Artefakte
+*.tmp
+*.temp
+*.log
+
+# .env-Dateien (Umgebungsvariablen mit geheimen Schlüsseln)
+**/.env
