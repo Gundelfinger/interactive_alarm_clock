@@ -12,40 +12,37 @@ document.getElementById('alarmForm').addEventListener('submit', function(event) 
       headers: {
           'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ time: time, music: music }),  // Daten im JSON-Format senden
+      body: JSON.stringify({ time: time, music: music }),
   })
   .then(response => {
       if (!response.ok) {
           throw new Error('Netzwerkantwort war nicht ok');
       }
-      return response.json();  // Die Antwort des Servers in JSON umwandeln
+      return response.json();
   })
   .then(data => {
-      console.log('Erfolg:', data);  // Rückmeldung des Servers anzeigen
-      alert(data.message);  // Zeigt eine Bestätigung für den Benutzer
+      alert(data.message);
   })
   .catch((error) => {
-      console.error('Fehler:', error);  // Fehlerbehandlung
+      console.error('Fehler:', error);
       alert('Fehler beim Senden der Weckzeit. Überprüfen Sie die Verbindung.');
   });
 });
 
 // Funktion zum Abrufen des Highscores
 document.getElementById('refreshHighscore').addEventListener('click', function() {
-  // Sende eine GET-Anfrage an das Backend, um den Highscore abzurufen
   fetch('http://localhost:3000/api/getHighscore')
   .then(response => {
       if (!response.ok) {
           throw new Error('Netzwerkantwort war nicht ok');
       }
-      return response.json();  // Die Antwort in JSON umwandeln
+      return response.json();
   })
   .then(data => {
-      // Den erhaltenen Highscore im HTML anzeigen
       document.getElementById('highscore').textContent = data.highscore;
   })
   .catch((error) => {
-      console.error('Fehler beim Abrufen des Highscores:', error);  // Fehlerbehandlung
+      console.error('Fehler beim Abrufen des Highscores:', error);
       alert('Fehler beim Abrufen des Highscores. Überprüfen Sie die Verbindung.');
   });
 });

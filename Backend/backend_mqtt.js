@@ -21,12 +21,12 @@ const app = express();
 const port = 3000;
 
 // Middleware
-app.use(cors({ // Verwende CORS, um Cross-Origin-Anfragen zu erlauben
-  origin: '*', // Erlaube Anfragen von allen Domains (für Testzwecke)
-  methods: ['GET', 'POST'], // Erlaube GET- und POST-Anfragen
-  allowedHeaders: ['Content-Type'] // Erlaube Content-Type Header
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
 }));
-app.use(bodyParser.json()); // Body-Parser zum Parsen von JSON-Anfragen
+app.use(bodyParser.json());
 
 // Speicher für den aktuellen Highscore
 let currentHighscore = '--:--';
@@ -58,7 +58,7 @@ app.post('/api/setAlarm', (req, res) => {
   const { time, music } = req.body;
   console.log(`Neue Alarmeinstellung erhalten: Zeit - ${time}, Musik - ${music}`);
 
-  // Nachricht formatieren und an den MQTT-Broker senden
+  // Nachricht formatieren und an den Broker senden
   const message = JSON.stringify({ alarmTime: time, selectedMusic: music });
   client.publish('alarm/settings', message, (err) => {
     if (err) {
