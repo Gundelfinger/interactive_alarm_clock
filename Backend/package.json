@@ -1,14 +1,13 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "",
+  "main": "backend_mqtt.js",
   "scripts": {
     "start": "node backend_mqtt.js"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "backend": "file:",
     "body-parser": "^1.20.3",
