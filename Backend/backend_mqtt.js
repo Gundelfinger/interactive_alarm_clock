@@ -1,7 +1,8 @@
-// Backend-Code (backend_mqtt.js)
+// Importiere notwendige Module
 const mqtt = require('mqtt');
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors'); // Importiere das CORS-Modul
 
 // MQTT Broker-Verbindungseinstellungen
 const mqttServer = 'mqtt://broker.hivemq.com'; // HiveMQ Broker
@@ -14,6 +15,21 @@ const client = mqtt.connect(mqttServer, {
   connectTimeout: 4000,
   reconnectPeriod: 1000,
 });
+
+// Express-Server erstellen
+const app = express();
+const port = 3000;
+
+// Middleware
+app.use(cors({ // Verwende CORS, um Cross-Origin-Anfragen zu erlauben
+  origin: '*', // Erlaube Anfragen von allen Domains (für Testzwecke)
+  methods: ['GET', 'POST'], // Erlaube GET- und POST-Anfragen
+  allowedHeaders: ['Content-Type'] // Erlaube Content-Type Header
+}));
+app.use(bodyParser.json()); // Body-Parser zum Parsen von JSON-Anfragen
+
+// Speicher für den aktuellen Highscore
+let currentHighscore = '--:--';
 
 // Verbinde mit dem MQTT-Broker und abonniere notwendige Topics
 client.on('connect', () => {
@@ -29,7 +45,7 @@ client.on('connect', () => {
   });
 });
 
-// Event-Handler für empfangene Nachrichten
+// Event-Handler für empfangene MQTT-Nachrichten
 client.on('message', (topic, message) => {
   if (topic === 'highscore') {
     console.log(`Highscore empfangen: ${message.toString()}`);
@@ -37,21 +53,12 @@ client.on('message', (topic, message) => {
   }
 });
 
-// Express Server erstellen
-const app = express();
-const port = 3000;
-
-// Middleware
-app.use(bodyParser.json());
-
-// Speicher für den aktuellen Highscore und Alarmdaten
-let currentHighscore = '--:--';
-
 // REST API zum Setzen der Alarmzeit
 app.post('/api/setAlarm', (req, res) => {
   const { time, music } = req.body;
+  console.log(`Neue Alarmeinstellung erhalten: Zeit - ${time}, Musik - ${music}`);
 
-  // Nachricht formatieren und an den Broker senden
+  // Nachricht formatieren und an den MQTT-Broker senden
   const message = JSON.stringify({ alarmTime: time, selectedMusic: music });
   client.publish('alarm/settings', message, (err) => {
     if (err) {
@@ -69,7 +76,7 @@ app.get('/api/getHighscore', (req, res) => {
   res.send({ highscore: currentHighscore });
 });
 
-// Server starten
+// Start des Servers
 app.listen(port, () => {
   console.log(`Backend-Server läuft auf http://localhost:${port}`);
 });
