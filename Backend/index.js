@@ -4,26 +4,35 @@ const bodyParser = require('body-parser');
 const app = express();
 app.use(bodyParser.json());
 
-let arduinoData = { highscore: null };
+// Globale Variable für den Highscore
+let highscore = null;
 
+// Root-Endpunkt
+app.get('/', (req, res) => {
+  res.send('Server is running. Use /sendAlarm or /getHighscore.');
+});
+
+// Endpunkt zum Setzen eines Alarms
 app.post('/sendAlarm', (req, res) => {
   const { time, music } = req.body;
   if (!time || !music) {
     return res.status(400).send({ error: 'Missing time or music' });
   }
-  console.log(`Received alarm time: ${time}, music: ${music}`);
-  
-  // Simulate communication with Arduino
-  arduinoData.highscore = Math.floor(Math.random() * 100) + 1;
+  console.log(`Received alarm time: ${time}`);
+  console.log(`Received music: ${music}`);
+
+  // Highscore zufällig generieren und speichern
+  highscore = Math.floor(Math.random() * 100) + 1;
 
   res.send({ success: true });
 });
 
+// Endpunkt zum Abrufen eines Highscores
 app.get('/getHighscore', (req, res) => {
-  if (arduinoData.highscore === null) {
+  if (highscore === null) {
     return res.status(400).send({ error: 'Highscore not available' });
   }
-  res.send({ highscore: arduinoData.highscore });
+  res.send({ highscore });
 });
 
 const PORT = process.env.PORT || 3000;
