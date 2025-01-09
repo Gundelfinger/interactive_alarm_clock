@@ -1,28 +1,27 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interaktiver Wecker</title>
-    <link rel="stylesheet" href="styles.css"> 
+  <meta charset="UTF-8">
+  <title>Interaktiver Wecker</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <h1>Wecker-Einstellungen</h1>
-    
-    <form id="alarmForm">
-        <label for="time">Weckzeit einstellen:</label>
-        <input type="time" id="time" name="time" required>
-        <button type="submit">Wecker setzen</button>
-    </form>
+  <h1>Wecker-Einstellungen</h1>
+  
+  <form id="alarmForm">
+    <label for="time">Weckzeit einstellen:</label>
+    <input type="time" id="time" name="time" required>
+    <button type="submit">Wecker setzen</button>
+  </form>
 
-    <div id="highscoreDisplay">
-        Aktueller Highscore: <span id="highscore">--</span>
-    </div>
+  <div id="highscoreDisplay">
+    Aktueller Highscore: <span id="highscore">--</span><br>
+    Benötigte Zeit: <span id="timeUsed">--</span>
+  </div>
 
-    <button id="refreshHighscore">Highscore aktualisieren</button>
+  <button id="refreshHighscore">Highscore aktualisieren</button>
 
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
-
