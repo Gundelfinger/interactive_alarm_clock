@@ -1,25 +1,84 @@
+/************************************************************************
+ index.js
+ Node.js-Backend mit:
+   - Persistenter Highscore-Speicherung in highscores.json
+   - Endpunkten für:
+       * POST /api/highscore (Arduino schickt Score)
+       * GET /getHighscores  (Frontend holt Top-10 + letzten Score)
+       * "normale" Alarm-Endpunkte wie /sendAlarm (optional)
+*************************************************************************/
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(bodyParser.json());
 
-// Globale Variablen für Alarmzeit / Highscore
-let currentAlarmTime = null;
-let globalHighscore = 0;
-let globalTimeMin = 0;
-let globalTimeSec = 0;
+// ----------------------------------------------------------------
+// Globale Variablen
+// ----------------------------------------------------------------
+let currentAlarmTime = null; // zuletzt gesetzte Alarmzeit
 
-// Statische Dateien aus "frontend"-Ordner (oder wie dein Ordner heißt)
+// Für persistente Highscores nutzen wir eine JSON-Datei:
+const HIGHSCORE_FILE = path.join(__dirname, 'highscores.json');
+
+// Interner Speicher: Array von Objekten { score, timeMin, timeSec, timestamp }
+let highscores = []; 
+// lastScore-Objekt: { score, timeMin, timeSec, timestamp }
+// Da wir das "letzte" separat anzeigen wollen, merken wir uns das extra.
+let lastScore = null; 
+
+// ----------------------------------------------------------------
+// 1) Highscores.json beim Serverstart laden
+// ----------------------------------------------------------------
+function loadHighscores() {
+  try {
+    if (fs.existsSync(HIGHSCORE_FILE)) {
+      const data = fs.readFileSync(HIGHSCORE_FILE, 'utf8');
+      highscores = JSON.parse(data);
+      console.log('Highscores aus Datei geladen:', highscores);
+      if (highscores.length > 0) {
+        // letzer Eintrag in der Datei als "lastScore"
+        lastScore = highscores[highscores.length - 1];
+      }
+    } else {
+      highscores = [];
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden der Highscore-Datei:', err);
+    highscores = [];
+  }
+}
+
+// ----------------------------------------------------------------
+// 2) Highscores.json sichern (überschreiben)
+// ----------------------------------------------------------------
+function saveHighscores() {
+  try {
+    fs.writeFileSync(HIGHSCORE_FILE, JSON.stringify(highscores, null, 2), 'utf8');
+    console.log('Highscores in Datei geschrieben.');
+  } catch (err) {
+    console.error('Fehler beim Speichern der Highscore-Datei:', err);
+  }
+}
+
+// Beim Serverstart einmalig laden
+loadHighscores();
+
+// ----------------------------------------------------------------
+// Statische Dateien aus "frontend"-Ordner
+// (hier liegen index.html, script.js, styles.css, ...)
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Root-Endpunkt -> index.html
+// Root -> index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
-// POST /sendAlarm -> vom Frontend (User stellt Alarm ein)
+// ----------------------------------------------------------------
+// Beispielfunktion: POST /sendAlarm (Frontend stellt Weckzeit ein)
+// ----------------------------------------------------------------
 app.post('/sendAlarm', (req, res) => {
   const { time } = req.body;
   if (!time) {
@@ -30,39 +89,74 @@ app.post('/sendAlarm', (req, res) => {
   return res.send({ success: true });
 });
 
-// GET /getHighscore -> vom Frontend -> liefert Highscore + Zeit
-app.get('/getHighscore', (req, res) => {
+// ----------------------------------------------------------------
+// 3) GET /getHighscores
+//    -> Liefert Top-10 Liste + lastScore
+// ----------------------------------------------------------------
+app.get('/getHighscores', (req, res) => {
+  // Sortiere absteigend nach "score"
+  const sorted = [...highscores].sort((a, b) => b.score - a.score);
+  // Top 10
+  const bestScores = sorted.slice(0, 10);
+
   res.send({
-    highscore: globalHighscore,
-    timeMin: globalTimeMin,
-    timeSec: globalTimeSec
+    bestScores,
+    lastScore
   });
 });
 
-// NEU: Arduino holt hier die Alarmzeit ab
+// ----------------------------------------------------------------
+// (Falls gewünscht) GET /getHighscoreList
+// -> könnte alternativ nur die Liste ohne lastScore liefern
+//   (z. B. falls man es trennen möchte)
+// ----------------------------------------------------------------
+// app.get('/getHighscoreList', (req, res) => {
+//   const sorted = [...highscores].sort((a, b) => b.score - a.score).slice(0, 10);
+//   res.send({ bestScores: sorted });
+// });
+
+// ----------------------------------------------------------------
+// 4) GET /api/alarmTime -> Arduino holt die aktuelle Weckzeit
+// ----------------------------------------------------------------
 app.get('/api/alarmTime', (req, res) => {
   const alarmTimeString = currentAlarmTime || "00:00";
   res.json({ alarmTime: alarmTimeString });
 });
 
-// NEU: Arduino schickt hier Highscore + Zeit in Min/Sec
+// ----------------------------------------------------------------
+// 5) POST /api/highscore
+//    -> Arduino schickt Highscore: { "highscore":..., "timeMin":..., "timeSec":... }
+// ----------------------------------------------------------------
 app.post('/api/highscore', (req, res) => {
   const { highscore, timeMin, timeSec } = req.body;
   if (highscore === undefined || timeMin === undefined || timeSec === undefined) {
     return res.status(400).send({ error: 'Missing data' });
   }
-  console.log(`Received highscore from Arduino: ${highscore}`);
-  console.log(`Time used: ${timeMin} min, ${timeSec} sec`);
+  console.log(`Received highscore from Arduino: ${highscore} (Zeit: ${timeMin} min, ${timeSec} s)`);
 
-  // Speichern in globalen Variablen
-  globalHighscore = highscore;
-  globalTimeMin = timeMin;
-  globalTimeSec = timeSec;
+  // 1) Neuen Datensatz anlegen
+  const newEntry = {
+    score: highscore,
+    timeMin,
+    timeSec,
+    timestamp: new Date().toISOString()
+  };
+
+  // 2) "lastScore" aktualisieren
+  lastScore = newEntry;
+
+  // 3) ins "highscores"-Array pushen
+  highscores.push(newEntry);
+  // 4) in Datei speichern (wir behalten alle Einträge in chronologischer Reihenfolge)
+  //    => Für "Top 10" sortieren wir erst im getHighscores-Endpunkt
+  saveHighscores();
 
   return res.send({ success: true });
 });
 
-// Server-Start
+// ----------------------------------------------------------------
+// Serverstart
+// ----------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

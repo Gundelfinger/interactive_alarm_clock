@@ -8,19 +8,38 @@
 <body>
 
   <h1>Wecker-Einstellungen</h1>
-  
+
+  <!-- Alarm einstellen -->
   <form id="alarmForm">
     <label for="time">Weckzeit einstellen:</label>
     <input type="time" id="time" name="time" required>
     <button type="submit">Wecker setzen</button>
   </form>
 
-  <div id="highscoreDisplay">
-    Aktueller Highscore: <span id="highscore">--</span><br>
-    Benötigte Zeit: <span id="timeUsed">--</span>
+  <hr>
+
+  <!-- Anzeige der Highscore-Liste & letzter Score -->
+  <h2>Highscore-Liste (Top 10)</h2>
+  <table id="highscoreTable">
+    <thead>
+      <tr>
+        <th>Platz</th>
+        <th>Score</th>
+        <th>Zeit (min:sec)</th>
+        <th>Datum/Uhrzeit Eintrag</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Hier füllen wir per JS die Einträge ein -->
+    </tbody>
+  </table>
+
+  <h2>Letzter Score</h2>
+  <div id="lastScore">
+    Noch kein Score vorhanden
   </div>
 
-  <button id="refreshHighscore">Highscore aktualisieren</button>
+  <button id="refreshHighscore">Highscores aktualisieren</button>
 
   <script src="script.js"></script>
 </body>
