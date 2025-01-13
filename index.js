@@ -1,11 +1,15 @@
 /************************************************************************
  index.js
- Node.js-Backend mit:
+ Node.js-Backend MIT:
    - Persistenter Highscore-Speicherung in highscores.json
-   - Endpunkten für:
+   - Endpunkten:
        * POST /api/highscore (Arduino schickt Score)
        * GET /getHighscores  (Frontend holt Top-10 + letzten Score)
-       * "normale" Alarm-Endpunkte wie /sendAlarm (optional)
+       * POST /sendAlarm (Frontend stellt Alarm)
+       * GET /api/alarmTime (Arduino holt Alarm)
+   - NEU: Distanz-Abstände für Sensor 1:
+       * POST /updateSensorRange (Frontend -> minDist, maxDist)
+       * GET  /getSensorRange    (Arduino -> abfragen)
 *************************************************************************/
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -26,8 +30,11 @@ const HIGHSCORE_FILE = path.join(__dirname, 'highscores.json');
 // Interner Speicher: Array von Objekten { score, timeMin, timeSec, timestamp }
 let highscores = []; 
 // lastScore-Objekt: { score, timeMin, timeSec, timestamp }
-// Da wir das "letzte" separat anzeigen wollen, merken wir uns das extra.
 let lastScore = null; 
+
+// NEU: Globale Variablen für Sensor1-Min/Max-Distanz (Standardwerte)
+let sensor1MinDist = 20;   // z. B. 20 cm
+let sensor1MaxDist = 200;  // z. B. 200 cm
 
 // ----------------------------------------------------------------
 // 1) Highscores.json beim Serverstart laden
@@ -39,7 +46,7 @@ function loadHighscores() {
       highscores = JSON.parse(data);
       console.log('Highscores aus Datei geladen:', highscores);
       if (highscores.length > 0) {
-        // letzer Eintrag in der Datei als "lastScore"
+        // Letzter Eintrag in der Datei als "lastScore"
         lastScore = highscores[highscores.length - 1];
       }
     } else {
@@ -68,7 +75,6 @@ loadHighscores();
 
 // ----------------------------------------------------------------
 // Statische Dateien aus "frontend"-Ordner
-// (hier liegen index.html, script.js, styles.css, ...)
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 // Root -> index.html
@@ -77,7 +83,7 @@ app.get('/', (req, res) => {
 });
 
 // ----------------------------------------------------------------
-// Beispielfunktion: POST /sendAlarm (Frontend stellt Weckzeit ein)
+// POST /sendAlarm (Frontend stellt Weckzeit ein)
 // ----------------------------------------------------------------
 app.post('/sendAlarm', (req, res) => {
   const { time } = req.body;
@@ -90,30 +96,16 @@ app.post('/sendAlarm', (req, res) => {
 });
 
 // ----------------------------------------------------------------
-// 3) GET /getHighscores
-//    -> Liefert Top-10 Liste + lastScore
+// 3) GET /getHighscores (Top-10 + lastScore)
 // ----------------------------------------------------------------
 app.get('/getHighscores', (req, res) => {
-  // Sortiere absteigend nach "score"
   const sorted = [...highscores].sort((a, b) => b.score - a.score);
-  // Top 10
   const bestScores = sorted.slice(0, 10);
-
   res.send({
     bestScores,
     lastScore
   });
 });
-
-// ----------------------------------------------------------------
-// (Falls gewünscht) GET /getHighscoreList
-// -> könnte alternativ nur die Liste ohne lastScore liefern
-//   (z. B. falls man es trennen möchte)
-// ----------------------------------------------------------------
-// app.get('/getHighscoreList', (req, res) => {
-//   const sorted = [...highscores].sort((a, b) => b.score - a.score).slice(0, 10);
-//   res.send({ bestScores: sorted });
-// });
 
 // ----------------------------------------------------------------
 // 4) GET /api/alarmTime -> Arduino holt die aktuelle Weckzeit
@@ -124,8 +116,7 @@ app.get('/api/alarmTime', (req, res) => {
 });
 
 // ----------------------------------------------------------------
-// 5) POST /api/highscore
-//    -> Arduino schickt Highscore: { "highscore":..., "timeMin":..., "timeSec":... }
+// 5) POST /api/highscore -> Arduino schickt Highscore
 // ----------------------------------------------------------------
 app.post('/api/highscore', (req, res) => {
   const { highscore, timeMin, timeSec } = req.body;
@@ -134,7 +125,6 @@ app.post('/api/highscore', (req, res) => {
   }
   console.log(`Received highscore from Arduino: ${highscore} (Zeit: ${timeMin} min, ${timeSec} s)`);
 
-  // 1) Neuen Datensatz anlegen
   const newEntry = {
     score: highscore,
     timeMin,
@@ -142,21 +132,40 @@ app.post('/api/highscore', (req, res) => {
     timestamp: new Date().toISOString()
   };
 
-  // 2) "lastScore" aktualisieren
   lastScore = newEntry;
-
-  // 3) ins "highscores"-Array pushen
   highscores.push(newEntry);
-  // 4) in Datei speichern (wir behalten alle Einträge in chronologischer Reihenfolge)
-  //    => Für "Top 10" sortieren wir erst im getHighscores-Endpunkt
   saveHighscores();
 
   return res.send({ success: true });
 });
 
 // ----------------------------------------------------------------
-// Serverstart
+// NEU: POST /updateSensorRange
+//     -> Vom Frontend bekommen wir { minDist, maxDist }
+app.post('/updateSensorRange', (req, res) => {
+  const { minDist, maxDist } = req.body;
+  if (typeof minDist !== 'number' || typeof maxDist !== 'number') {
+    return res.status(400).json({ error: 'Missing or invalid minDist/maxDist' });
+  }
+  console.log(`Update Sensor1 Range: min=${minDist}, max=${maxDist}`);
+
+  sensor1MinDist = minDist;
+  sensor1MaxDist = maxDist;
+
+  return res.json({ success: true });
+});
+
 // ----------------------------------------------------------------
+// NEU: GET /getSensorRange
+//     -> Arduino fragt die aktuellen minDist, maxDist ab
+app.get('/getSensorRange', (req, res) => {
+  res.json({
+    minDist: sensor1MinDist,
+    maxDist: sensor1MaxDist
+  });
+});
+
+// Serverstart
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

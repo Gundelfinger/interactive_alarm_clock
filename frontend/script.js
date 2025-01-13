@@ -4,6 +4,7 @@
    - Alarmzeit setzen (POST /sendAlarm)
    - Highscore-Liste abfragen (GET /getHighscores), 
      dann Top-10 & lastScore anzeigen
+   - NEU: minDist, maxDist einstellen (POST /updateSensorRange)
 ************************************************************************/
 
 // 1) Alarmzeit ins Backend senden
@@ -48,7 +49,6 @@ async function refreshHighscores() {
     // data.bestScores => Array (max. 10 Einträge)
     // data.lastScore => das zuletzt erzielte Score-Objekt
 
-    // 3a) Tabelle leeren + neu befüllen
     const tbody = document.querySelector('#highscoreTable tbody');
     tbody.innerHTML = '';
 
@@ -86,7 +86,7 @@ async function refreshHighscores() {
       tbody.appendChild(tr);
     }
 
-    // 3b) Letzter Score anzeigen
+    // Letzter Score anzeigen
     const lastScoreDiv = document.getElementById('lastScore');
     if (data.lastScore) {
       const { score, timeMin, timeSec, timestamp } = data.lastScore;
@@ -105,3 +105,31 @@ async function refreshHighscores() {
     alert('Fehler beim Laden der Highscores');
   }
 }
+
+// NEU: Sensor1-Range aktualisieren
+document.getElementById('updateRangeBtn').addEventListener('click', async () => {
+  const minDistVal = parseInt(document.getElementById('minDist').value, 10);
+  const maxDistVal = parseInt(document.getElementById('maxDist').value, 10);
+
+  // Plausibilitätscheck
+  if (minDistVal < 20 || maxDistVal > 500 || minDistVal >= maxDistVal) {
+    return alert('Bitte gültige Werte eingeben (z.B. min=20, max=200).');
+  }
+
+  try {
+    const response = await fetch('/updateSensorRange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minDist: minDistVal, maxDist: maxDistVal }),
+    });
+    const result = await response.json();
+    if (result.success) {
+      alert(`Sensor1 Range aktualisiert: ${minDistVal} - ${maxDistVal} cm.`);
+    } else {
+      alert('Fehler beim Aktualisieren der Sensor1-Distanz.');
+    }
+  } catch (err) {
+    console.error('Error updating sensor range:', err);
+    alert('Netzwerkfehler beim Aktualisieren der Distanz.');
+  }
+});
